@@ -13,16 +13,14 @@ from staff import STAFF, STAFF_EMOJI
 
 app = Flask(__name__)
 
-PORT = 4390
+CLIENT_ID = os.getenv("CLIENT_ID")
 
-CLIENT_ID = "889493798706.908148713520"
+CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 
-CLIENT_SECRET = "ebcb324338a27e02f9b40d3a9cfd1be0"
-
-SIGNING_SECRET = "ee5339f5f06e4b9bf2fc6413f45a51c1"
+SIGNING_SECRET = os.getenv("SIGNING_SECRET")
 
 CLIENT_NAME = "emojify"
-AUTH_KEY = "RRQH1SSHXGUU676S3RDRNFCT0TJJUXN4WKER0YQ5DN8M53PE59TJLGTW8HYXYM4V"
+AUTH_KEY = os.getenv("AUTH_KEY")
 
 if os.getenv("FLASK_ENV") == "development":
     engine = create_engine("mysql://localhost/emojify")
@@ -65,11 +63,6 @@ def oauth():
         store_user_token(resp.json()["user_id"], resp.json()["access_token"])
         return jsonify(resp.json())
     return jsonify({"Error": "sadcat"}), 500
-
-
-@app.route("/ping", methods=["POST"])
-def ping():
-    return "woot"
 
 
 def store_user_token(user, token):
@@ -174,8 +167,6 @@ def handler():
 
 @app.route("/message_send", methods=["POST"])
 def message_send():
-    # TODO: VERIFY SIGNING TOKEN!!!
-    fail = False
     d = request.json
     try:
         if "challenge" in d:
@@ -193,16 +184,19 @@ def message_send():
         if match:
             cid = int(match.group(1))
             print("HANDLING: {}".format(cid))
-            resp = requests.post("https://auth.apps.cs61a.org/piazza/get_post", json={
-                "staff": True,
-                "cid": cid,
-                "client_name": CLIENT_NAME,
-                "secret": AUTH_KEY,
-            }).json()
+            resp = requests.post(
+                "https://auth.apps.cs61a.org/piazza/get_post",
+                json={
+                    "staff": True,
+                    "cid": cid,
+                    "client_name": CLIENT_NAME,
+                    "secret": AUTH_KEY,
+                },
+            ).json()
             subject = resp["history"][0]["subject"]
             content = resp["history"][0]["content"]
 
-            content = unescape(re.sub('<[^<]+?>', '', content))
+            content = unescape(re.sub("<[^<]+?>", "", content))
 
             print(
                 requests.post(
@@ -211,34 +205,40 @@ def message_send():
                         "channel": event["channel"],
                         "ts": event["ts"],
                         "as_user": True,
-                        "blocks": [
+                        "attachments": [
                             {
-                                "type": "section",
-                                "text": {"type": "mrkdwn", "text": processed},
-                            },
-                            {"type": "divider"},
-                            {
-                                "type": "section",
-                                "text": {
-                                    "type": "mrkdwn",
-                                    "text": ":piazza: *{}* \n {}".format(subject, content),
-                                },
-                                "accessory": {
-                                    "type": "button",
-                                    "text": {"type": "plain_text", "text": "Open"},
-                                    "value": "piazza_open_click",
-                                    "url": "https://piazza.com/class/k5g56y7yegw5xr?cid={}".format(cid)
-                                },
-                            },
-                            {
-                                "type": "context",
-                                "elements": [
+                                "blocks": [
                                     {
-                                        "type": "mrkdwn",
-                                        "text": "Piazza integration provided by emojify.apps.cs61a.org",
-                                    }
-                                ],
-                            },
+                                        "type": "section",
+                                        "text": {
+                                            "type": "mrkdwn",
+                                            "text": ":piazza: *{}* \n {}".format(
+                                                subject, content
+                                            ),
+                                        },
+                                        "accessory": {
+                                            "type": "button",
+                                            "text": {
+                                                "type": "plain_text",
+                                                "text": "Open",
+                                            },
+                                            "value": "piazza_open_click",
+                                            "url": "https://piazza.com/class/k5g56y7yegw5xr?cid={}".format(
+                                                cid
+                                            ),
+                                        },
+                                    },
+                                    {
+                                        "type": "context",
+                                        "elements": [
+                                            {
+                                                "type": "mrkdwn",
+                                                "text": "Piazza integration provided by emojify.apps.cs61a.org",
+                                            }
+                                        ],
+                                    },
+                                ]
+                            }
                         ],
                     },
                     headers={"Authorization": "Bearer {}".format(token)},
@@ -257,7 +257,6 @@ def message_send():
             )
 
     except Exception as e:
-        fail = True
         print("".join(traceback.TracebackException.from_exception(e).format()))
     finally:
         if "challenge" in d:
@@ -266,4 +265,4 @@ def message_send():
 
 
 if __name__ == "__main__":
-    app.run(port=PORT)
+    app.run()
