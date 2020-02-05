@@ -180,7 +180,7 @@ def message_send():
 
         processed = process(event["text"], token)
 
-        match = re.search("@([0-9]+)", processed)
+        match = re.search("@([0-9]+)(_f([0-9]+))?", processed)
         if match:
             cid = int(match.group(1))
             print("HANDLING: {}".format(cid))
@@ -195,6 +195,19 @@ def message_send():
             ).json()
             subject = resp["history"][0]["subject"]
             content = resp["history"][0]["content"]
+
+            if match.group(3):
+                fid = int(match.group(3))  # 1 indexed
+                curr_id = 0
+                for child in resp["children"]:
+                    if child["type"] != "followup":
+                        continue
+                    curr_id += 1
+                    if fid == curr_id:
+                        break
+                else:
+                    return
+                content = child["subject"]
 
             content = unescape(re.sub("<[^<]+?>", "", content))
 
@@ -213,7 +226,7 @@ def message_send():
                                         "text": {
                                             "type": "mrkdwn",
                                             "text": ":piazza: *{}* \n {}".format(
-                                                subject, content
+                                                subject, content[:2500]
                                             ),
                                         },
                                         "accessory": {
