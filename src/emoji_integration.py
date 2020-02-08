@@ -12,8 +12,8 @@ cached_names = {}
 
 class EmojiIntegration(Integration):
     @property
-    def text(self):
-        return process(self.message, self.token)
+    def message(self):
+        return process(self._message, self._token)
 
 
 def get_name(id, token):

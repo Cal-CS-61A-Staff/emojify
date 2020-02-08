@@ -6,6 +6,7 @@ import requests
 from flask import Flask, request, jsonify, redirect
 
 from emoji_integration import EmojiIntegration
+from golink_integration import GoLinkIntegration
 from integration import combine_integrations
 from piazza_integration import PiazzaIntegration
 
@@ -92,16 +93,20 @@ def message_send():
         if "subtype" in event:
             return
 
-        combined_integration = combine_integrations([EmojiIntegration, PiazzaIntegration])(event["text"], token)
+        combined_integration = combine_integrations([
+            EmojiIntegration,
+            PiazzaIntegration,
+            GoLinkIntegration,
+        ])(event["text"], token)
 
-        if combined_integration.text != event["text"] or combined_integration.attachments:
+        if combined_integration.message != event["text"] or combined_integration.attachments:
             requests.post(
                 "https://slack.com/api/chat.update",
                 json={
                     "channel": event["channel"],
                     "ts": event["ts"],
                     "as_user": True,
-                    "text": combined_integration.text,
+                    "text": combined_integration.message,
                     "attachments": combined_integration.attachments
                 },
                 headers={"Authorization": "Bearer {}".format(token)},

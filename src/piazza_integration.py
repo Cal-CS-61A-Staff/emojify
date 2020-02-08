@@ -5,21 +5,22 @@ from html import unescape
 
 from auth import query
 from integration import Integration
+from utils import OrderedSet
 
 COURSE = query("piazza/course_id", staff=True)
 
 SHORT_REGEX = r"@(?P<cid>[0-9]+)(_f(?P<fid>[0-9]+))?"
-LONG_REGEX = r"https://piazza.com/class/{}\?cid=(?P<cid>[0-9]+)(_f(?P<fid>[0-9]+))?".format(COURSE)
+LONG_REGEX = r"https://piazza\.com/class/{}\?cid=(?P<cid>[0-9]+)(_f(?P<fid>[0-9]+))?".format(COURSE)
 
 Post = namedtuple("Post", ["subject", "content", "url", "full_cid"])
 
 
 class PiazzaIntegration(Integration):
-    def process(self):
-        self.posts = {}
+    def _process(self):
+        self._posts = OrderedSet()
         for match in itertools.chain(
-                re.finditer(SHORT_REGEX, self.message),
-                re.finditer(LONG_REGEX, self.message),
+                re.finditer(SHORT_REGEX, self._message),
+                re.finditer(LONG_REGEX, self._message),
         ):
             cid = int(match.group("cid"))
             fid_str = match.group("fid")
@@ -44,15 +45,16 @@ class PiazzaIntegration(Integration):
             content = unescape(re.sub("<[^<]+?>", "", content))
             url = "https://piazza.com/class/{}?cid={}".format(COURSE, full_cid)
 
-            self.posts[Post(subject, content, url, full_cid)] = None
+            self._posts.add(Post(subject, content, url, full_cid))
 
     @property
-    def text(self):
-        out = self.message
-        for post in self.posts:
+    def message(self):
+        out = self._message
+        for post in self._posts:
+            shortform = "@{}".format(post.full_cid)
             link = "<{}|@{}>".format(post.url, post.full_cid)
-            out = out.replace("<{}>".format(post.url), link)
-            out = re.sub(r"(?<!\|)(@{})".format(post.full_cid), link, out)
+            out = out.replace("<{}>".format(post.url), shortform)
+            out = out.replace(shortform, link)
         return out
 
     @property
@@ -81,5 +83,5 @@ class PiazzaIntegration(Integration):
                     },
                 ]
             }
-            for post in self.posts
+            for post in self._posts
         ]
