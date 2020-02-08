@@ -94,17 +94,18 @@ def message_send():
 
         combined_integration = combine_integrations([EmojiIntegration, PiazzaIntegration])(event["text"], token)
 
-        requests.post(
-            "https://slack.com/api/chat.update",
-            json={
-                "channel": event["channel"],
-                "ts": event["ts"],
-                "as_user": True,
-                "text": combined_integration.text,
-                "attachments": combined_integration.attachments
-            },
-            headers={"Authorization": "Bearer {}".format(token)},
-        )
+        if combined_integration.text != event["text"] or combined_integration.attachments:
+            requests.post(
+                "https://slack.com/api/chat.update",
+                json={
+                    "channel": event["channel"],
+                    "ts": event["ts"],
+                    "as_user": True,
+                    "text": combined_integration.text,
+                    "attachments": combined_integration.attachments
+                },
+                headers={"Authorization": "Bearer {}".format(token)},
+            )
 
     except Exception as e:
         print("".join(traceback.TracebackException.from_exception(e).format()))
