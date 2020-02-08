@@ -1,15 +1,13 @@
-import random
 import traceback
-from html import unescape
 
 from sqlalchemy import create_engine, text
-import re
 import os.path
 import requests
 from flask import Flask, request, jsonify, redirect
-from string import punctuation
 
-from staff import STAFF, STAFF_EMOJI
+from emoji_integration import EmojiIntegration
+from integration import combine_integrations
+from piazza_integration import PiazzaIntegration
 
 app = Flask(__name__)
 
@@ -18,9 +16,6 @@ CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 
 SIGNING_SECRET = os.getenv("SIGNING_SECRET")
-
-CLIENT_NAME = "emojify"
-AUTH_KEY = os.getenv("AUTH_KEY")
 
 if os.getenv("FLASK_ENV") == "development":
     engine = create_engine("mysql://localhost/emojify")
@@ -37,11 +32,9 @@ with engine.connect() as conn:
     )
     conn.execute(statement)
 
-cached_names = {}
-
 
 @app.route("/")
-def hello_world():
+def index():
     return redirect(
         f"https://slack.com/oauth/authorize?client_id={CLIENT_ID}&scope=channels:history,channels:write,chat:write:user,users:read,groups:history,im:history,mpim:history"
     )
@@ -81,85 +74,6 @@ def get_user_token(user):
     return out
 
 
-def get_name(id, token):
-    if id in cached_names:
-        return cached_names[id]
-    resp = requests.post(
-        "https://slack.com/api/users.info", {"token": token, "user": id}
-    )
-    out = resp.json()["user"]["real_name"]
-    cached_names[id] = out
-    return out
-
-
-def get_staff(word, token):
-    candidates = set()
-    if word.startswith("<@") and word.endswith(">"):
-        word = get_name(word[2:-1], token)
-    for staff in STAFF:
-        if (staff.firstName + " " + staff.lastName).lower() == word.lower():
-            candidates.add(staff)
-    for staff in STAFF:
-        if word.lower() == (staff.firstName + " " + staff.lastName[0]).lower():
-            candidates.add(staff)
-    for staff in STAFF:
-        if staff.firstName.lower() == word.lower():
-            candidates.add(staff)
-    if candidates:
-        return random.choice(list(candidates))
-
-
-def strip_punctuation(word):
-    if word.startswith("<@") and word.endswith(">"):
-        return "", word, ""
-    rest = word.lstrip(punctuation)
-    leading = word[: len(word) - len(rest)]
-    stripped = rest.rstrip(punctuation)
-    trailing = rest[len(stripped) :]
-    print(word, leading, stripped, trailing)
-    return leading, stripped, trailing
-
-
-def has_staff_emoji(text):
-    emojis = re.findall(":.+?:", text)
-    for emoji in emojis:
-        if emoji in STAFF_EMOJI:
-            return True
-    return False
-
-
-def process(text, token):
-    text.replace("<@", " <@")
-    text.replace("  <@", " <@")
-    if text.startswith(" <@"):
-        text = text[1:]
-    words = text.split(" ")
-
-    if has_staff_emoji(text):
-        return text
-
-    for i, word in enumerate(words):
-        if not words[i]:
-            continue
-
-        if i != len(words) - 1:
-            next_word = words[i + 1]
-            combined = word + " " + next_word
-            leading, stripped, trailing = strip_punctuation(combined)
-            staff = get_staff(stripped, token)
-            if staff is not None:
-                words[i] = leading + combined + f" ({staff.emoji}) " + trailing
-                words[i + 1] = ""
-                continue
-
-        leading, stripped, trailing = strip_punctuation(word)
-        staff = get_staff(stripped, token)
-        if staff is None:
-            continue
-        words[i] = leading + stripped + f" ({staff.emoji})" + trailing
-    return " ".join(words)
-
-
 @app.route("/interactive_handler", methods=["POST"])
 def handler():
     return ""
@@ -178,96 +92,19 @@ def message_send():
         if "subtype" in event:
             return
 
-        processed = process(event["text"], token)
+        combined_integration = combine_integrations([EmojiIntegration, PiazzaIntegration])(event["text"], token)
 
-        match = re.search("@([0-9]+)(_f([0-9]+))?", processed)
-        if match:
-            cid = int(match.group(1))
-            print("HANDLING: {}".format(cid))
-            resp = requests.post(
-                "https://auth.apps.cs61a.org/piazza/get_post",
-                json={
-                    "staff": True,
-                    "cid": cid,
-                    "client_name": CLIENT_NAME,
-                    "secret": AUTH_KEY,
-                },
-            ).json()
-            subject = resp["history"][0]["subject"]
-            content = resp["history"][0]["content"]
-
-            if match.group(3):
-                fid = int(match.group(3))  # 1 indexed
-                curr_id = 0
-                for child in resp["children"]:
-                    if child["type"] != "followup":
-                        continue
-                    curr_id += 1
-                    if fid == curr_id:
-                        break
-                else:
-                    return
-                content = child["subject"]
-
-            content = unescape(re.sub("<[^<]+?>", "", content))
-
-            print(
-                requests.post(
-                    "https://slack.com/api/chat.update",
-                    json={
-                        "channel": event["channel"],
-                        "ts": event["ts"],
-                        "as_user": True,
-                        "attachments": [
-                            {
-                                "blocks": [
-                                    {
-                                        "type": "section",
-                                        "text": {
-                                            "type": "mrkdwn",
-                                            "text": ":piazza: *{}* \n {}".format(
-                                                subject, content[:2500]
-                                            ),
-                                        },
-                                        "accessory": {
-                                            "type": "button",
-                                            "text": {
-                                                "type": "plain_text",
-                                                "text": "Open",
-                                            },
-                                            "value": "piazza_open_click",
-                                            "url": "https://piazza.com/class/k5g56y7yegw5xr?cid={}".format(
-                                                cid
-                                            ),
-                                        },
-                                    },
-                                    {
-                                        "type": "context",
-                                        "elements": [
-                                            {
-                                                "type": "mrkdwn",
-                                                "text": "Piazza integration provided by emojify.apps.cs61a.org",
-                                            }
-                                        ],
-                                    },
-                                ]
-                            }
-                        ],
-                    },
-                    headers={"Authorization": "Bearer {}".format(token)},
-                ).json()
-            )
-        elif event["text"] != processed:
-            requests.post(
-                "https://slack.com/api/chat.update",
-                {
-                    "token": token,
-                    "channel": event["channel"],
-                    "text": processed,
-                    "ts": event["ts"],
-                    "as_user": True,
-                },
-            )
+        requests.post(
+            "https://slack.com/api/chat.update",
+            json={
+                "channel": event["channel"],
+                "ts": event["ts"],
+                "as_user": True,
+                "text": combined_integration.text,
+                "attachments": combined_integration.attachments
+            },
+            headers={"Authorization": "Bearer {}".format(token)},
+        )
 
     except Exception as e:
         print("".join(traceback.TracebackException.from_exception(e).format()))
