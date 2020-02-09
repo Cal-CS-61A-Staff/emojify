@@ -37,7 +37,7 @@ with engine.connect() as conn:
 @app.route("/")
 def index():
     return redirect(
-        f"https://slack.com/oauth/authorize?client_id={CLIENT_ID}&scope=channels:history,channels:write,chat:write:user,users:read,groups:history,im:history,mpim:history"
+        f"https://slack.com/oauth/v2/authorize?client_id={CLIENT_ID}&user_scope=channels:history,groups:history,im:history,mpim:history,chat:write"
     )
 
 
@@ -46,7 +46,7 @@ def oauth():
     if not request.args["code"]:
         return jsonify({"Error": "sadcat"}), 500
     resp = requests.post(
-        "https://slack.com/api/oauth.access",
+        "https://slack.com/api/oauth.v2.access",
         {
             "code": request.args["code"],
             "client_id": CLIENT_ID,
@@ -54,7 +54,7 @@ def oauth():
         },
     )
     if resp.status_code == 200:
-        store_user_token(resp.json()["user_id"], resp.json()["access_token"])
+        store_user_token(resp.json()["authed_user"]["id"], resp.json()["authed_user"]["access_token"])
         return jsonify(resp.json())
     return jsonify({"Error": "sadcat"}), 500
 
@@ -100,7 +100,7 @@ def message_send():
         ])(event["text"], token)
 
         if combined_integration.message != event["text"] or combined_integration.attachments:
-            requests.post(
+            print(requests.post(
                 "https://slack.com/api/chat.update",
                 json={
                     "channel": event["channel"],
@@ -110,7 +110,7 @@ def message_send():
                     "attachments": combined_integration.attachments
                 },
                 headers={"Authorization": "Bearer {}".format(token)},
-            )
+            ).text)
 
     except Exception as e:
         print("".join(traceback.TracebackException.from_exception(e).format()))

@@ -10,7 +10,7 @@ from utils import OrderedSet
 COURSE = query("piazza/course_id", staff=True)
 
 SHORT_REGEX = r"@(?P<cid>[0-9]+)(_f(?P<fid>[0-9]+))?"
-LONG_REGEX = r"https://piazza\.com/class/{}\?cid=(?P<cid>[0-9]+)(_f(?P<fid>[0-9]+))?".format(COURSE)
+LONG_REGEX = r"<(https?://)?piazza\.com/class/{}\?cid=(?P<cid>[0-9]+)(_f(?P<fid>[0-9]+))?(\|[^\s|]+)?>".format(COURSE)
 
 Post = namedtuple("Post", ["subject", "content", "url", "full_cid"])
 
@@ -42,6 +42,7 @@ class PiazzaIntegration(Integration):
                     return
                 content = child["subject"]
 
+            subject = unescape(subject)
             content = unescape(re.sub("<[^<]+?>", "", content))
             url = "https://piazza.com/class/{}?cid={}".format(COURSE, full_cid)
 
@@ -54,6 +55,7 @@ class PiazzaIntegration(Integration):
             shortform = "@{}".format(post.full_cid)
             link = "<{}|@{}>".format(post.url, post.full_cid)
             out = out.replace("<{}>".format(post.url), shortform)
+            out = out.replace("<{}|{}>".format(post.url, post.url), shortform)
             out = out.replace(shortform, link)
         return out
 
