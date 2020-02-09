@@ -29,7 +29,7 @@ def get_name(id, token):
 
 def get_staff(word, token):
     candidates = set()
-    if word.startswith("<@") and word.endswith(">"):
+    if word.startswith("<@") and word.endswith(">") and token:
         word = get_name(word[2:-1], token)
     for staff in STAFF:
         if (staff.firstName + " " + staff.lastName).lower() == word.lower():
