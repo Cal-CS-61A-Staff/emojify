@@ -1,7 +1,6 @@
 import json
-from os import abort
 
-from flask import request, url_for
+from flask import request, url_for, abort
 from werkzeug.utils import redirect
 
 from auth import query
@@ -76,7 +75,7 @@ def create_config_client(app):
                 401,
             )
         if len(active_courses) == 1:
-            return redirect("/register/{}".format(active_courses))
+            return redirect(url_for("register_course", course=active_courses[0]))
 
         options = "<p>".join(
             '<button formaction="register/{}">{}</button>'.format(course, course)
@@ -92,6 +91,7 @@ def create_config_client(app):
 
     @app.route("/register/<course>")
     def register_course(course):
+        print(get_endpoint(course), list(get_staff_endpoints(app.remote)))
         if get_endpoint(course) not in get_staff_endpoints(app.remote):
             abort(403)
 
@@ -150,8 +150,8 @@ def create_config_client(app):
             ).fetchone()
             if not check:
                 db(
-                    "INSERT INTO bot_data VALUES (%s, %s, %s, %s)",
-                    ["", client_name, client_secret, course],
+                    "INSERT INTO bot_data VALUES (%s, %s, %s, %s, %s)",
+                    ["", client_name, client_secret, "", course],
                 )
             else:
                 db(
