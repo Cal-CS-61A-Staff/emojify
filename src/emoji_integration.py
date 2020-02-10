@@ -22,7 +22,6 @@ def get_name(id, token):
     resp = requests.post(
         "https://slack.com/api/users.info", {"token": token, "user": id}
     )
-    print(resp.json())
     out = resp.json()["user"]["real_name"]
     cached_names[id] = out
     return out

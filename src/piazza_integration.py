@@ -7,25 +7,25 @@ from auth import query
 from integration import Integration
 from utils import OrderedSet
 
-COURSE = query("piazza/course_id", staff=True)
-
 SHORT_REGEX = r"@(?P<cid>[0-9]+)(_f(?P<fid>[0-9]+))?"
-LONG_REGEX = r"<(https?://)?piazza\.com/class/{}\?cid=(?P<cid>[0-9]+)(_f(?P<fid>[0-9]+))?(\|[^\s|]+)?>".format(COURSE)
+LONG_REGEX = r"<(https?://)?piazza\.com/class/{}\?cid=(?P<cid>[0-9]+)(_f(?P<fid>[0-9]+))?(\|[^\s|]+)?>"
 
 Post = namedtuple("Post", ["subject", "content", "url", "full_cid"])
 
 
 class PiazzaIntegration(Integration):
     def _process(self):
+        course_id = query("piazza/course_id", course=self._course, staff=True)
+
         self._posts = OrderedSet()
         for match in itertools.chain(
                 re.finditer(SHORT_REGEX, self._message),
-                re.finditer(LONG_REGEX, self._message),
+                re.finditer(LONG_REGEX.format(course_id), self._message),
         ):
             cid = int(match.group("cid"))
             fid_str = match.group("fid")
             full_cid = match.group("cid") + ("_f{}".format(fid_str) if fid_str else "")
-            post = query("piazza/get_post", staff=True, cid=cid)
+            post = query("piazza/get_post", course=self._course, staff=True, cid=cid)
             subject = post["history"][0]["subject"]
             content = post["history"][0]["content"]
 
@@ -44,7 +44,7 @@ class PiazzaIntegration(Integration):
 
             subject = unescape(subject)
             content = unescape(re.sub("<[^<]+?>", "", content))
-            url = "https://piazza.com/class/{}?cid={}".format(COURSE, full_cid)
+            url = "https://piazza.com/class/{}?cid={}".format(course_id, full_cid)
 
             self._posts.add(Post(subject, content, url, full_cid))
 

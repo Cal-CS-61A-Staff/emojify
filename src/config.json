@@ -1,0 +1,19 @@
+{
+  "cs61a": {
+    "features": {
+      "piazza": true,
+      "golinks": true,
+      "emoji": true
+    }
+  },
+  "eecs16a": {
+    "features": {
+      "piazza": true
+    }
+  },
+  "eecs16b": {
+    "features": {
+      "piazza": true
+    }
+  }
+}
