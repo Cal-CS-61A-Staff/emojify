@@ -15,5 +15,45 @@
     "features": {
       "piazza": true
     }
+  },
+  "cs70": {
+    "features": {
+      "piazza": true
+    }
+  },
+  "cs170": {
+    "features": {
+      "piazza": true
+    }
+  },
+  "eecs101": {
+    "features": {
+      "piazza": true
+    }
+  },
+  "cs88": {
+    "features": {
+      "piazza": true
+    }
+  },
+  "cs61b": {
+    "features": {
+      "piazza": true
+    }
+  },
+  "data100": {
+    "features": {
+      "piazza": true
+    }
+  },
+  "cs162": {
+    "features": {
+      "piazza": true
+    }
+  },
+  "cs61c": {
+    "features": {
+      "piazza": true
+    }
   }
 }

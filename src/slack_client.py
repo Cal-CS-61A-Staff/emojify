@@ -6,7 +6,15 @@ import requests
 from flask import jsonify, request, redirect
 
 from auth import query
-from config_client import CONFIG, REJECTED, UNABLE, get_user_token, store_user_token, store_bot_token, get_team_data
+from config_client import (
+    CONFIG,
+    REJECTED,
+    UNABLE,
+    get_user_token,
+    store_user_token,
+    store_bot_token,
+    get_team_data,
+)
 from db import connect_db
 from emoji_integration import EmojiIntegration
 from env import CLIENT_ID, CLIENT_SECRET
@@ -45,18 +53,21 @@ def create_slack_client(app):
         )
         if resp.status_code == 200:
             data = resp.json()
-            print(data)
             bot_token = data["access_token"]
             workspace_data = requests.post(
                 "https://slack.com/api/auth.test",
                 headers={"Authorization": "Bearer {}".format(bot_token)},
             ).json()
             workspace_url = workspace_data["url"]
-            workspace = re.match(r"https://([a-zA-Z\-0-9]+)\.slack\.com", workspace_url).group(1)
+            workspace = re.match(
+                r"https://([a-zA-Z\-0-9]+)\.slack\.com", workspace_url
+            ).group(1)
             store_bot_token(get_course(workspace), data["team"]["id"], bot_token)
             store_user_token(
                 data["authed_user"]["id"], data["authed_user"]["access_token"]
             )
+            with connect_db() as db:
+                db("DELETE FROM silenced_users WHERE user = (%s)", [data["authed_user"]["id"]])
             return redirect(workspace_url)
         return jsonify({"Error": "sadcat"}), 500
 
@@ -126,9 +137,19 @@ def create_slack_client(app):
             if "subtype" in event:
                 return
 
-            combined_integration = combine_integrations(
-                [EmojiIntegration, PiazzaIntegration, GoLinkIntegration]
-            )(event["text"], token if token is not UNABLE else None, team_id)
+            features = CONFIG[course]["features"]
+
+            integrations = []
+            if features.get("piazza"):
+                integrations.append(PiazzaIntegration)
+            if features.get("emojify"):
+                integrations.append(EmojiIntegration)
+            if features.get("golinks"):
+                integrations.append(GoLinkIntegration)
+
+            combined_integration = combine_integrations(integrations)(
+                event["text"], token if token is not UNABLE else None, team_id
+            )
 
             if (
                 combined_integration.message != event["text"]
@@ -155,7 +176,7 @@ def create_slack_client(app):
                         # token available, but no permissions
                         token = UNABLE
 
-                if token is UNABLE:
+                if token is UNABLE or "slack_force" in event["text"]:
                     requests.post(
                         "https://slack.com/api/chat.postEphemeral",
                         json={
@@ -163,6 +184,7 @@ def create_slack_client(app):
                             "attachments": [],
                             "channel": event["channel"],
                             "user": event["user"],
+                            "username": "61A Slackbot"
                         },
                         headers={"Authorization": "Bearer {}".format(bot_token)},
                     ).json()
