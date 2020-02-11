@@ -39,7 +39,6 @@ def get_course(workspace):
 
 def create_slack_client(app):
     @app.route("/oauth")
-    @slack_signed
     def oauth():
         if not request.args["code"]:
             return jsonify({"Error": "sadcat"}), 500
