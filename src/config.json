@@ -3,7 +3,7 @@
     "features": {
       "piazza": true,
       "golinks": true,
-      "emoji": true
+      "emojify": true
     }
   },
   "eecs16a": {
