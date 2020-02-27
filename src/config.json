@@ -29,7 +29,8 @@
   },
   "eecs101": {
     "features": {
-      "piazza": true
+      "piazza": true,
+      "groups": true
     }
   },
   "cs88": {

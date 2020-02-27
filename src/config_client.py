@@ -11,7 +11,7 @@ from security import logged_in, get_staff_endpoints
 REJECTED = object()
 UNABLE = object()
 
-ADD_TO_SLACK = f"https://slack.com/oauth/v2/authorize?client_id={CLIENT_ID}&scope=channels:join,channels:read,chat:write&user_scope=channels:history,chat:write,groups:history,im:history,mpim:history,users:read"
+ADD_TO_SLACK = f"https://slack.com/oauth/v2/authorize?client_id={CLIENT_ID}&scope=channels:join,channels:read,chat:write,users:read,users:read.email&user_scope=channels:history,chat:write,groups:history,im:history,mpim:history,users:read"
 
 with open("config.json") as f:
     CONFIG = json.load(f)
@@ -91,7 +91,6 @@ def create_config_client(app):
 
     @app.route("/register/<course>")
     def register_course(course):
-        print(get_endpoint(course), list(get_staff_endpoints(app.remote)))
         if get_endpoint(course) not in get_staff_endpoints(app.remote):
             abort(403)
 

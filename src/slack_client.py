@@ -20,6 +20,7 @@ from emoji_integration import EmojiIntegration
 from env import CLIENT_ID, CLIENT_SECRET
 from ethical_integration import Ethicalntegration
 from golink_integration import GoLinkIntegration
+from group_integration import GroupIntegration
 from integration import combine_integrations
 from piazza_integration import PiazzaIntegration
 from promotions import make_promo_block
@@ -148,10 +149,24 @@ def create_slack_client(app):
                 integrations.append(GoLinkIntegration)
             if features.get("fun"):
                 integrations.append(Ethicalntegration)
+            if features.get("groups"):
+                integrations.append(GroupIntegration)
 
             combined_integration = combine_integrations(integrations)(
                 event["text"], token if token is not UNABLE else None, team_id
             )
+
+            if combined_integration.responses:
+                for response in combined_integration.responses:
+                    requests.post(
+                        "https://slack.com/api/chat.postMessage",
+                        json={
+                            "channel": event["channel"],
+                            **({"thread_ts": event["thread_ts"]} if "thread_ts" in event else {}),
+                            "text": response,
+                        },
+                        headers={"Authorization": "Bearer {}".format(bot_token)},
+                    )
 
             if (
                 combined_integration.message != event["text"]
@@ -186,6 +201,7 @@ def create_slack_client(app):
                             "attachments": [],
                             "channel": event["channel"],
                             "user": event["user"],
+                            **({"thread_ts": event["thread_ts"]} if "thread_ts" in event else {}),
                             "username": "61A Slackbot"
                         },
                         headers={"Authorization": "Bearer {}".format(bot_token)},
