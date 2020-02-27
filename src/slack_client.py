@@ -18,6 +18,7 @@ from config_client import (
 from db import connect_db
 from emoji_integration import EmojiIntegration
 from env import CLIENT_ID, CLIENT_SECRET
+from ethical_integration import Ethicalntegration
 from golink_integration import GoLinkIntegration
 from integration import combine_integrations
 from piazza_integration import PiazzaIntegration
@@ -145,6 +146,8 @@ def create_slack_client(app):
                 integrations.append(EmojiIntegration)
             if features.get("golinks"):
                 integrations.append(GoLinkIntegration)
+            if features.get("fun"):
+                integrations.append(Ethicalntegration)
 
             combined_integration = combine_integrations(integrations)(
                 event["text"], token if token is not UNABLE else None, team_id
