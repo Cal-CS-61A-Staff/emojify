@@ -18,11 +18,12 @@ from config_client import (
 from db import connect_db
 from emoji_integration import EmojiIntegration
 from env import CLIENT_ID, CLIENT_SECRET
-from ethical_integration import Ethicalntegration
+
 from golink_integration import GoLinkIntegration
 from group_integration import GroupIntegration
 from integration import combine_integrations
 from piazza_integration import PiazzaIntegration
+
 from promotions import make_promo_block
 from security import slack_signed
 
@@ -138,18 +139,20 @@ def create_slack_client(app):
             if "subtype" in event:
                 return
 
-            features = CONFIG[course]["features"]
+            with connect_db() as db:
+                ret = db(
+                    "SELECT service FROM activated_services WHERE course = (%s)", [course]
+                )
+                active_services = set(x[0] for x in ret)
 
             integrations = []
-            if features.get("piazza"):
+            if "piazza" in active_services:
                 integrations.append(PiazzaIntegration)
-            if features.get("emojify"):
+            if "emojify" in active_services:
                 integrations.append(EmojiIntegration)
-            if features.get("golinks"):
+            if "golinks" in active_services:
                 integrations.append(GoLinkIntegration)
-            if features.get("fun"):
-                integrations.append(Ethicalntegration)
-            if features.get("groups"):
+            if "groups" in active_services:
                 integrations.append(GroupIntegration)
 
             combined_integration = combine_integrations(integrations)(

@@ -1,61 +1,8 @@
 {
-  "cs61a": {
-    "features": {
-      "piazza": true,
-      "golinks": true,
-      "emojify": true,
-      "fun": true
-    }
-  },
-  "eecs16a": {
-    "features": {
-      "piazza": true
-    }
-  },
-  "eecs16b": {
-    "features": {
-      "piazza": true
-    }
-  },
-  "cs70": {
-    "features": {
-      "piazza": true
-    }
-  },
-  "cs170": {
-    "features": {
-      "piazza": true
-    }
-  },
-  "eecs101": {
-    "features": {
-      "piazza": true,
-      "groups": true
-    }
-  },
-  "cs88": {
-    "features": {
-      "piazza": true
-    }
-  },
-  "cs61b": {
-    "features": {
-      "piazza": true
-    }
-  },
-  "data100": {
-    "features": {
-      "piazza": true
-    }
-  },
-  "cs162": {
-    "features": {
-      "piazza": true
-    }
-  },
-  "cs61c": {
-    "features": {
-      "piazza": true
+    "services": {
+      "piazza": "Automatically preview Piazza links posted in chat.",
+      "golinks": "Automatically reformat golinks posted in chat.",
+      "emojify": "Include emoji of staff members when their names are mentioned.",
+      "groups": "Automatically tag particular groups (e.g. @heads) when mentioned."
     }
   }
-}

@@ -6,8 +6,8 @@ from flask import session, url_for, request, redirect, abort, jsonify
 from flask_oauthlib.client import OAuth
 from werkzeug import security
 
-CONSUMER_KEY = os.getenv("OAUTH_CLIENT")
-SECRET = os.getenv("OAUTH_SECRET")
+CONSUMER_KEY = os.getenv("OAUTH_CLIENT", "local-dev-email")
+SECRET = os.getenv("OAUTH_SECRET", "KH0mvknMUWT5w3U7zvz6wsUQZoy6UmQ")
 
 
 def create_oauth_client(app):

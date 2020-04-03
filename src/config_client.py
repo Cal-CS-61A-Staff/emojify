@@ -11,7 +11,10 @@ from security import logged_in, get_staff_endpoints
 REJECTED = object()
 UNABLE = object()
 
-ADD_TO_SLACK = f"https://slack.com/oauth/v2/authorize?client_id={CLIENT_ID}&scope=channels:join,channels:read,chat:write,users:read,users:read.email&user_scope=channels:history,chat:write,groups:history,im:history,mpim:history,users:read"
+
+def get_add_to_slack_link(domain):
+    return f"https://{domain}.slack.com/oauth/v2/authorize?client_id={CLIENT_ID}&scope=channels:join,channels:read,chat:write,users:read,users:read.email&user_scope=channels:history,chat:write,groups:history,im:history,mpim:history,users:read"
+
 
 with open("config.json") as f:
     CONFIG = json.load(f)
@@ -37,8 +40,6 @@ def init_db():
         db(
             """CREATE TABLE IF NOT EXISTS bot_data (
                 bot_access_token varchar(256),
-                auth_client varchar(128),
-                auth_secret varchar(256),
                 team_id varchar(256),
                 course varchar(128)
             )"""
@@ -65,8 +66,8 @@ def create_config_client(app):
     def index():
         staff_endpoints = set(get_staff_endpoints(app.remote))
         active_courses = []
-        for course in CONFIG:
-            if get_endpoint(course) in staff_endpoints:
+        for course, endpoint in query("/api/list_courses", course=None):
+            if endpoint in staff_endpoints:
                 active_courses.append(course)
 
         if len(active_courses) == 0:
@@ -99,7 +100,7 @@ def create_config_client(app):
 
         if ret:
             # course already setup
-            return redirect(ADD_TO_SLACK)
+            return redirect(get_add_to_slack_link(query("/slack/workspace_name", course=course)))
         else:
             return redirect(url_for("course_config", course=course))
 
@@ -110,29 +111,39 @@ def create_config_client(app):
 
         with connect_db() as db:
             ret = db(
-                "SELECT auth_client FROM bot_data WHERE course = (%s)", [course]
-            ).fetchone()
+                "SELECT service FROM activated_services WHERE course = (%s)", [course]
+            )
+            active_services = set(x[0] for x in ret)
 
-        client = ret[0] if ret else ""
+        service_list = "<br />".join(
+            f"""
+            <label>
+                <input 
+                    type="checkbox" 
+                    name="{service}" 
+                    {"checked" if service in active_services else ""}
+                >
+                {service.title()}: {description}
+            </label>
+        """
+            for service, description in CONFIG["services"].items()
+        )
 
         return f"""
             First, ensure that <a href="https://auth.apps.cs61a.org">61A Auth</a> is set up for your course.
             <p>
-            Create a client on 61A Auth with staff access to Piazza. Then, set up the slackbot:
+            Then set up the bot.
             <form action="{url_for("set_course_config", course=course)}" method="post">
-                <label>
-                    Client name: <br />
-                    <input name="client_name" type="text" placeholder="{client}"> <br />
-                </label>
-                <label>
-                    Client secret: <br />
-                    <input name="client_secret" type="text" placeholder="HIDDEN"> <br />
-                </label>
+                 Services:
+                 <br />
+                 {service_list}
                  <br />
                 <input type="submit" />
             </form>
             <p>
-            Then, <a href="{ADD_TO_SLACK}">add the slackbot to your workspace!</a>
+            Then, <a href={get_add_to_slack_link(query("/slack/workspace_name", course=course))}>
+                add the slackbot to your workspace!
+            </a>
         """
 
     @app.route("/set_config/<course>", methods=["POST"])
@@ -140,23 +151,17 @@ def create_config_client(app):
         if get_endpoint(course) not in get_staff_endpoints(app.remote):
             abort(403)
 
-        client_name = request.form["client_name"]
-        client_secret = request.form["client_secret"]
-
         with connect_db() as db:
-            check = db(
-                "SELECT * FROM bot_data WHERE course = (%s)", [course]
-            ).fetchone()
-            if not check:
+            for service in CONFIG["services"]:
                 db(
-                    "INSERT INTO bot_data VALUES (%s, %s, %s, %s, %s)",
-                    ["", client_name, client_secret, "", course],
+                    "DELETE FROM activated_services WHERE course=(%s) AND service=(%s)",
+                    [course, service],
                 )
-            else:
-                db(
-                    "UPDATE bot_data SET auth_client=(%s), auth_secret=(%s) WHERE course=(%s)",
-                    [client_name, client_secret, course],
-                )
+                if service in request.form:
+                    db(
+                        "INSERT INTO activated_services VALUES (%s, %s)",
+                        [course, service],
+                    )
 
         return redirect(url_for("course_config", course=course))
 
@@ -184,9 +189,15 @@ def get_user_token(user):
 
 def store_bot_token(course, team_id, token):
     with connect_db() as db:
-        db("UPDATE bot_data SET bot_access_token=(%s), team_id=(%s) WHERE course=(%s)", [token, team_id, course])
+        db(
+            "UPDATE bot_data SET bot_access_token=(%s), team_id=(%s) WHERE course=(%s)",
+            [token, team_id, course],
+        )
 
 
 def get_team_data(team_id):
     with connect_db() as db:
-        return db("SELECT course, bot_access_token FROM bot_data WHERE team_id = (%s)", [team_id]).fetchone()
+        return db(
+            "SELECT course, bot_access_token FROM bot_data WHERE team_id = (%s)",
+            [team_id],
+        ).fetchone()
