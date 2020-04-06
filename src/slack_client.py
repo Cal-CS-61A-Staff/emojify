@@ -32,7 +32,7 @@ WORKSPACE_CACHE = {}
 
 def get_course(workspace):
     if workspace not in WORKSPACE_CACHE:
-        for course in CONFIG:
+        for course, _ in query("/api/list_courses", course=None):
             try:
                 WORKSPACE_CACHE[query("/slack/workspace_name", course=course)] = course
             except KeyError:
@@ -122,13 +122,11 @@ def create_slack_client(app):
             event = d["event"]
 
             if event["type"] == "channel_created":
-                print(
-                    requests.post(
-                        "https://slack.com/api/conversations.join",
-                        json={"channel": event["channel"]["id"]},
-                        headers={"Authorization": "Bearer {}".format(bot_token)},
-                    ).json()
-                )
+                requests.post(
+                    "https://slack.com/api/conversations.join",
+                    json={"channel": event["channel"]["id"]},
+                    headers={"Authorization": "Bearer {}".format(bot_token)},
+                ).json()
                 return
 
             token = get_user_token(event["user"])

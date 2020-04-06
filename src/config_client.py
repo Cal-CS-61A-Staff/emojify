@@ -13,8 +13,7 @@ UNABLE = object()
 
 
 def get_add_to_slack_link(domain):
-    return f"https://{domain}.slack.com/oauth/v2/authorize?client_id={CLIENT_ID}&scope=channels:join,channels:read,chat:write,users:read,users:read.email&user_scope=channels:history,chat:write,groups:history,im:history,mpim:history,users:read"
-
+    return f"https://{domain}.slack.com/oauth/v2/authorize?client_id={CLIENT_ID}&scope=channels:join,channels:read,chat:write,users:read,users:read.email,groups:read&user_scope=channels:history,chat:write,groups:history,im:history,mpim:history,users:read"
 
 with open("config.json") as f:
     CONFIG = json.load(f)

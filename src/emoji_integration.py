@@ -51,7 +51,6 @@ def strip_punctuation(word):
     leading = word[: len(word) - len(rest)]
     stripped = rest.rstrip(punctuation)
     trailing = rest[len(stripped) :]
-    print(word, leading, stripped, trailing)
     return leading, stripped, trailing
 
 
