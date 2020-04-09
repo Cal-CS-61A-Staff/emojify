@@ -1,3 +1,4 @@
+import json
 from functools import wraps
 
 import requests
@@ -43,13 +44,36 @@ def create_api_client(app):
                 [course],
             ).fetchone()
 
-        requests.post(
-            "https://slack.com/api/chat.postMessage",
-            json={
-                "channel": request.json["channel"],
-                "text": request.json["message"],
-            },
-            headers={"Authorization": "Bearer {}".format(bot_token)},
-        )
+        message = request.json["message"]
+
+        if isinstance(message, str):
+            message = email_replace(message, bot_token)
+            requests.post(
+                "https://slack.com/api/chat.postMessage",
+                json={
+                    "channel": request.json["channel"],
+                    "text": message,
+                },
+                headers={"Authorization": "Bearer {}".format(bot_token)},
+            )
+        else:
+            stringify = json.dumps(message)
+            stringify = email_replace(stringify, bot_token)
+            message = json.loads(stringify)
+            requests.post(
+                "https://slack.com/api/chat.postMessage",
+                json={
+                    "channel": request.json["channel"],
+                    "blocks": message,
+                },
+                headers={"Authorization": "Bearer {}".format(bot_token)},
+            )
 
         return ""
+
+
+def email_replace(message, bot_token):
+    users = requests.get("https://slack.com/api/users.list", params={"token": bot_token}).json()
+    for member in users["members"]:
+        message = message.replace(f"<!{member['profile'].get('email')}>", f"<@{member['id']}>")
+    return message
