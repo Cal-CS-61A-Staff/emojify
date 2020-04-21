@@ -17,7 +17,7 @@ class GroupIntegration(Integration):
             try:
                 if course == "heads" or course == "admins":
                     course = self._course
-                admins = query("admins/{}/list_admins".format(course), course=None)
+                admins = query("admins/list_admins", course=course)
             except:
                 continue
             if not admins:
