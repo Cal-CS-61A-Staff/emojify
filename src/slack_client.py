@@ -6,8 +6,8 @@ import requests
 from flask import jsonify, request, redirect
 
 from auth import query
+from clap_integration import ClapIntegration
 from config_client import (
-    CONFIG,
     REJECTED,
     UNABLE,
     get_user_token,
@@ -152,6 +152,8 @@ def create_slack_client(app):
                 integrations.append(GoLinkIntegration)
             if "groups" in active_services:
                 integrations.append(GroupIntegration)
+            if "claps" in active_services:
+                integrations.append(ClapIntegration)
 
             combined_integration = combine_integrations(integrations)(
                 event["text"], token if token is not UNABLE else None, team_id
