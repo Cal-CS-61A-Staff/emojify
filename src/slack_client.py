@@ -146,14 +146,14 @@ def create_slack_client(app):
             integrations = []
             if "piazza" in active_services:
                 integrations.append(PiazzaIntegration)
+            if "claps" in active_services:
+                integrations.append(ClapIntegration)
             if "emojify" in active_services:
                 integrations.append(EmojiIntegration)
             if "golinks" in active_services:
                 integrations.append(GoLinkIntegration)
             if "groups" in active_services:
                 integrations.append(GroupIntegration)
-            if "claps" in active_services:
-                integrations.append(ClapIntegration)
 
             combined_integration = combine_integrations(integrations)(
                 event["text"], token if token is not UNABLE else None, team_id
