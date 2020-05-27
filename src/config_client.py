@@ -188,6 +188,15 @@ def get_user_token(user):
 
 def store_bot_token(course, team_id, token):
     with connect_db() as db:
+        check = db(
+            "SELECT * FROM bot_data WHERE course = (%s)", [course]
+        ).fetchone()
+        if not check:
+            db(
+                "INSERT INTO bot_data VALUES (%s, %s, %s)",
+                ["", "", course],
+            )
+
         db(
             "UPDATE bot_data SET bot_access_token=(%s), team_id=(%s) WHERE course=(%s)",
             [token, team_id, course],
