@@ -8,7 +8,7 @@ from utils import OrderedSet
 PrLink = namedtuple("PrLink", ["path"])
 
 VALID_PATH = r"[0-9A-Za-z\-]"
-PATH_REGEX = r"(?P<path>{}+)".format(VALID_PATH)
+PATH_REGEX = r"(?P<path>{}+)".format(VALID_PATH) 
 
 REGEX_TEMPLATE = r"<(https?://)?github\.com/Cal-CS-61A-Staff/berkeley-cs61a/pull/{}/?(\|[^\s|]+)?>"
 SHORT_REGEX_TEMPLATE = r"pr/{}/?"

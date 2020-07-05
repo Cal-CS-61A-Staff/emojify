@@ -19,6 +19,7 @@ class EmojiIntegration(Integration):
 def get_name(id, token):
     if id in cached_names:
         return cached_names[id]
+    
     resp = requests.post(
         "https://slack.com/api/users.info", {"token": token, "user": id}
     )
@@ -26,10 +27,14 @@ def get_name(id, token):
     cached_names[id] = out
     return out
 
-
+def can_get_name(id):
+    if " " in id or "@" in id:
+        return False
+    return True
+    
 def get_staff(word, token):
     candidates = set()
-    if word.startswith("<@") and word.endswith(">") and token:
+    if word.startswith("<@") and word.endswith(">") and token and can_get_name(word[2:-1]):
         word = get_name(word[2:-1], token)
     for staff in STAFF:
         if (staff.firstName + " " + staff.lastName).lower() == word.lower():
