@@ -24,6 +24,7 @@ from group_integration import GroupIntegration
 from integration import combine_integrations
 from piazza_integration import PiazzaIntegration
 from prlink_integration import PRLinkIntegration
+from links_integration import LinkLinkIntegration
 
 from promotions import make_promo_block
 from security import slack_signed
@@ -157,6 +158,8 @@ def create_slack_client(app):
                 integrations.append(GroupIntegration)
             if "prlinks" in active_services:
                 integrations.append(PRLinkIntegration)
+            if "linklinks" in active_services:
+                integrations.append(LinkLinkIntegration)
 
             combined_integration = combine_integrations(integrations)(
                 event["text"], token if token is not UNABLE else None, team_id
