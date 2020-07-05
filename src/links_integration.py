@@ -36,4 +36,5 @@ class LinkLinkIntegration(Integration):
                 r"<https://links.cs61a.org/{}|links/{}>".format(link.path, link.path),
                 out,
             )
+        
         return out
