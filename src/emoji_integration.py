@@ -63,8 +63,8 @@ def has_staff_emoji(text):
 
 
 def process(text, token):
-    text.replace("<@", " <@")
-    text.replace("  <@", " <@")
+    text = text.replace("<@", " <@")
+    text = text.replace("  <@", " <@")
     if text.startswith(" <@"):
         text = text[1:]
     words = text.split(" ")
