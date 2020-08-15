@@ -37,13 +37,13 @@ def get_staff(word, token):
     if word.startswith("<@") and word.endswith(">") and token and can_get_name(word[2:-1]):
         word = get_name(word[2:-1], token)
     for staff in STAFF:
-        if (staff.firstName + " " + staff.lastName).lower() == word.lower():
+        if (staff.firstName + " " + staff.lastName).lower() in word.lower():
             candidates.add(staff)
     for staff in STAFF:
-        if word.lower() == (staff.firstName + " " + staff.lastName[0]).lower():
+        if (staff.firstName + " " + staff.lastName[0]).lower() in word.lower():
             candidates.add(staff)
     for staff in STAFF:
-        if staff.firstName.lower() == word.lower():
+        if staff.firstName.lower() in word.lower():
             candidates.add(staff)
     if candidates:
         return random.choice(list(candidates))
